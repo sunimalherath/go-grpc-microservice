@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 
+	"github.com/sunimalherath/grpc-go/calculator/calculatorpb"
 	"github.com/sunimalherath/grpc-go/calculator/sumpb"
 	"google.golang.org/grpc"
 )
@@ -18,7 +19,8 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	sumpb.RegisterSumServiceServer(s, &server{})
+	//sumpb.RegisterSumServiceServer(s, &server{})
+	calculatorpb.RegisterCalculatorServiceServer(s, &server{})
 
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("Failed to server: %v", err)
@@ -36,4 +38,21 @@ func (*server) GetSum(ctx context.Context, req *sumpb.SumRequest) (*sumpb.SumRes
 	}
 
 	return res, nil
+}
+
+func (*server) PrimeNumberDecomposition(req *calculatorpb.PrimeNumberDecompositionRequest, stream calculatorpb.CalculatorService_PrimeNumberDecompositionServer) error {
+	number := req.GetNumber()
+	divisor := int64(2)
+
+	for number > 1 {
+		if number%divisor == 0 {
+			stream.Send(&calculatorpb.PrimeNumberDecompositionResponse{
+				PrimeFactor: divisor,
+			})
+			number = number / divisor
+		} else {
+			divisor++
+		}
+	}
+	return nil
 }
