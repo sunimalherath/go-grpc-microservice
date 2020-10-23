@@ -57,6 +57,27 @@ func (*server) LongGreet(stream greetpb.GreetService_LongGreetServer) error {
 	}
 }
 
+func (*server) GreetEveryone(stream greetpb.GreetService_GreetEveryoneServer) error {
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		greetMessage := "Hello " + req.GetGreeting().GetFirstName() + " !"
+
+		sendErr := stream.Send(&greetpb.GreetEveryoneResponse{
+			Result: greetMessage,
+		})
+		if sendErr != nil {
+			return sendErr
+		}
+	}
+	return nil
+}
+
 func main() {
 	lis, err := net.Listen("tcp", "0.0.0.0:50051") // port binding
 	if err != nil {
