@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"time"
 
 	"github.com/sunimalherath/grpc-go/calculator/calculatorpb"
 	"google.golang.org/grpc"
@@ -22,7 +23,8 @@ func main() {
 	c := calculatorpb.NewCalculatorServiceClient(cc)
 
 	//doUnary(c)
-	doServerStreaming(c)
+	//doServerStreaming(c)
+	doAverage(c)
 }
 
 // func doUnary(c sumpb.CalculatorServiceClient) {
@@ -65,4 +67,48 @@ func doServerStreaming(c calculatorpb.CalculatorServiceClient) {
 		}
 		fmt.Println(res.GetPrimeFactor())
 	}
+}
+
+func doAverage(c calculatorpb.CalculatorServiceClient) {
+	requests := []*calculatorpb.ComputeAverageRequest{
+		&calculatorpb.ComputeAverageRequest{
+			Number: 23,
+		},
+		&calculatorpb.ComputeAverageRequest{
+			Number: 45,
+		},
+		&calculatorpb.ComputeAverageRequest{
+			Number: 74,
+		},
+		&calculatorpb.ComputeAverageRequest{
+			Number: 28,
+		},
+	}
+
+	stream, err := c.ComputeAverage(context.Background())
+	if err != nil {
+		log.Fatalf("Error occured while steaming: %v", err)
+	}
+
+	for _, req := range requests {
+		fmt.Printf("Sending request: %v\n", req.GetNumber())
+		stream.Send(req)
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	// Start alternate method ->  or can do as follows with a number slice
+	numbers := []int64{23, 45, 74, 28}
+
+	for _, number := range numbers {
+		stream.Send(&calculatorpb.ComputeAverageRequest{
+			Number: number,
+		})
+	}
+	// End alternate method
+
+	res, err := stream.CloseAndRecv()
+	if err != nil {
+		log.Fatalf("Error while receiving results: %v", err)
+	}
+	fmt.Printf("Computed average: %v", res.GetAverage())
 }
