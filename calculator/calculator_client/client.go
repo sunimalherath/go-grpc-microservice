@@ -7,6 +7,9 @@ import (
 	"log"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/sunimalherath/grpc-go/calculator/calculatorpb"
 	"google.golang.org/grpc"
 )
@@ -24,7 +27,8 @@ func main() {
 
 	//doUnary(c)
 	//doServerStreaming(c)
-	doAverage(c)
+	//doAverage(c)
+	doErrorUnary(c)
 }
 
 // func doUnary(c sumpb.CalculatorServiceClient) {
@@ -111,4 +115,32 @@ func doAverage(c calculatorpb.CalculatorServiceClient) {
 		log.Fatalf("Error while receiving results: %v", err)
 	}
 	fmt.Printf("Computed average: %v", res.GetAverage())
+}
+
+func doErrorUnary(c calculatorpb.CalculatorServiceClient) {
+	// correct call
+	doErrorCall(c, 20)
+
+	// incorrect call
+	doErrorCall(c, -39)
+}
+
+func doErrorCall(c calculatorpb.CalculatorServiceClient, n int32) {
+	res, err := c.SquareRoot(context.Background(), &calculatorpb.SquareRootRequest{Number: n})
+
+	if err != nil {
+		respErr, ok := status.FromError(err)
+		if ok {
+			// this is the actual error from gRPC
+			fmt.Println(respErr.Message())
+			fmt.Println(respErr.Code())
+			// can check for different errors like below
+			if respErr.Code() == codes.InvalidArgument {
+				fmt.Println("Sent a negative number!")
+			}
+		} else {
+			log.Fatalf("Some other error not in status: %v", err)
+		}
+	}
+	fmt.Printf("Result of square root of %v: %v\n", n, res.GetNumberRoot())
 }
